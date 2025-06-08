@@ -1,0 +1,34 @@
+# Core dependencies (required)
+fastapi>=0.103.0  # Modern, fast web framework for building APIs
+uvicorn>=0.23.2  # ASGI server implementation
+pydantic>=2.3.0  # Data validation and settings management using Python type hints
+pydantic-settings>=2.0.0  # Settings management using Pydantic
+
+# AWS S3 integration (required)
+aioboto3>=11.3.0  # Async wrapper for boto3
+boto3>=1.28.36  # AWS SDK for Python
+
+# Database (required)
+aiosqlite>=0.19.0  # Async SQLite for Python
+
+# File operations (required)
+aiofiles>=23.2.1  # Async file operations
+watchdog>=3.0.0  # Filesystem events monitoring
+
+# Utilities (required)
+python-multipart>=0.0.6  # Support for form/file uploads in FastAPI
+python-dotenv>=1.0.0  # Read key-value pairs from .env file
+
+# Typing support (optional but recommended)
+boto3-stubs>=1.28.36  # Type annotations for boto3
+types-aiofiles>=23.2.0.0  # Type stubs for aiofiles
+
+# Testing (optional, development only)
+pytest>=7.4.0  # Testing framework
+pytest-asyncio>=0.21.1  # Pytest support for asyncio
+httpx>=0.24.1  # HTTP client for testing FastAPI
+moto>=4.2.2  # Mock AWS services
+
+# Logging (recommended for production)
+structlog>=23.1.0  # Structured logging
+black
