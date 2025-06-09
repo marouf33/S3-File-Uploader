@@ -71,19 +71,32 @@ async def update_upload_request_status(upload_id: str, status: str) -> bool:
     return await db.update_upload_status(upload_id, status)
 
 
-async def get_file_tasks(upload_id: str) -> List[Dict]:
+async def get_file_tasks(upload_id: str, file_path: str = None, status: str = None) -> List[Dict]:
     """
-    Get all file tasks for an upload request.
+    Get all file tasks for an upload request with optional filtering.
 
     Args:
         upload_id: The ID of the upload request
+        file_path: Optional file path to filter by
+        status: Optional status to filter by (e.g., 'completed')
 
     Returns:
         A list of file tasks as dictionaries
     """
     tasks = []
     async with db.connection.cursor() as cursor:
-        await cursor.execute("SELECT * FROM file_tasks WHERE upload_id = ?", (upload_id,))
+        query = "SELECT * FROM file_tasks WHERE upload_id = ?"
+        params = [upload_id]
+
+        if file_path:
+            query += " AND file_path = ?"
+            params.append(file_path)
+
+        if status:
+            query += " AND status = ?"
+            params.append(status)
+
+        await cursor.execute(query, params)
         rows = await cursor.fetchall()
 
         # Convert rows to dictionaries

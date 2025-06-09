@@ -11,11 +11,12 @@ import glob
 import logging
 import os
 import time  # Import time module for Unix timestamps
+from datetime import datetime
 from typing import Dict, Set, Tuple
 
 from app.db import db
 from app.config import config
-from app.tasks import create_file_task, update_upload_request_status
+from app.tasks import create_file_task, update_upload_request_status, get_file_tasks
 
 logger = logging.getLogger(__name__)
 
@@ -204,9 +205,46 @@ class FileMonitor:
         all_changed_files = []
         files_overdue = False
 
+        # Function to check if a file needs to be processed based on its modification time
+        async def needs_processing(file_path: str) -> bool:
+            # Get the file's current modification time
+            try:
+                if not os.path.exists(file_path):
+                    return False
+
+                current_mod_time = os.path.getmtime(file_path)
+
+                # Check if there's already a completed task for this file
+                existing_tasks = await get_file_tasks(upload_id, file_path, "completed")
+
+                if existing_tasks:
+                    # Get the most recent completed task
+                    latest_task = max(existing_tasks, key=lambda x: x["updated_at"])
+
+                    # Extract the last_modified timestamp from the task
+                    task_mod_time_str = latest_task["last_modified"]
+                    task_mod_time = datetime.fromisoformat(task_mod_time_str.replace('Z', '+00:00')).timestamp()
+
+                    # Use a small epsilon (0.001 second) to account for potential floating-point precision issues
+                    # Only process if the file has been modified since the last completed task (with margin)
+                    epsilon = 0.005  # 5 millisecond tolerance
+                    return current_mod_time > (task_mod_time + epsilon)
+
+                # No existing completed task found, so we should process it
+                return True
+
+            except (OSError, FileNotFoundError) as e:
+                logger.warning(f"Error checking file {file_path}: {e}")
+                # If there's an error, we'll default to processing the file
+                return True
+
         # Process new files
         for file_path in new_files:
             try:
+                if not await needs_processing(file_path):
+                    logger.debug(f"Skipping already processed file: {file_path}")
+                    continue
+
                 file_size_mb = os.path.getsize(file_path) / (1024 * 1024)  # Convert to MB
                 total_change_size_mb += file_size_mb
                 all_changed_files.append(file_path)
@@ -216,6 +254,10 @@ class FileMonitor:
         # Process modified files
         for file_path in modified_files:
             try:
+                if not await needs_processing(file_path):
+                    logger.debug(f"Skipping already processed file: {file_path}")
+                    continue
+
                 file_size_mb = os.path.getsize(file_path) / (1024 * 1024)  # Convert to MB
                 total_change_size_mb += file_size_mb
                 all_changed_files.append(file_path)
